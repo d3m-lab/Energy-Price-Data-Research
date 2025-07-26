@@ -1,5 +1,3 @@
-# prompt: read all csv from this folder /content/drive/MyDrive/Research/Dr. Habib & Dr. Reza Data/Energy Price Market Data/Day Ahead Price Data_Processed/Australia
-# and print the first csv into datframe
 
 import os
 import pandas as pd

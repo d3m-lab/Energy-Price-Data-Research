@@ -1,6 +1,3 @@
-# prompt: read "/content/drive/MyDrive/Research/Dr. Habib & Dr. Reza Data/Energy Price Market Data/Day Ahead Price Data_Raw/Europe_New" the folder as input_dir and then read all the folders as country name. then read those country  folder if you find csv files  then combine all the csv files where 1st column will Timestapmp column. however first column has a date string and take the datetime before hypen "-" and format is "%m.%d.%Y %H:%M" but convert to datetime. Second column will be second column .
-# if after reading the country folder, if you find out there is more folder then those folder names are zone. merge all the csv files and add a column zone. then first column timestamp will be taken from the first column seperated by hyphen  and take the previous part of it. remmeber date formate is "%m.%d.%Y %H:%M" and need to convert it to datetime. second column will be price from the second column. and zone column will be another. at the end convert zone to column and price will be values.
-# then all the out put will be saved to "/content/drive/MyDrive/Research/Dr. Habib & Dr. Reza Data/Energy Price Market Data/Day Ahead Price Data_Processed/Europe_New" with the country folder then year.csv
 import os
 import pandas as pd
 from datetime import datetime

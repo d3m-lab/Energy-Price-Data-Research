@@ -1,50 +1,77 @@
 
 
-import os
-import pandas as pd
+# Define the input and output directories
+input_dir = r"D:\OneDrive - The Pennsylvania State University\Research DATA\Dr. Habib & Dr. Reza Data\Energy Price Market Data\Day Ahead Price Data_Raw\USA\CAISO_New_07.14.2025"
+output_dir = r"D:\OneDrive - The Pennsylvania State University\Research DATA\Dr. Habib & Dr. Reza Data\Energy Price Market Data\Day Ahead Price Data_Processed\USA\CAISO_NEW"
 
-input_folder = "/content/drive/MyDrive/Research/Dr. Habib & Dr. Reza Data/Energy Price Market Data/Day Ahead Price Data_Raw/USA/CAISO"
-output_folder = "/content/drive/MyDrive/Research/Dr. Habib & Dr. Reza Data/Energy Price Market Data/Day Ahead Price Data_Processed/USA/CAISO"
+# Ensure the output directory exists
+os.makedirs(output_dir, exist_ok=True)
 
-# Ensure the output folder exists
-os.makedirs(output_folder, exist_ok=True)
+# Define the columns to keep and their new names
+selected_columns = {
+    "Local Timestamp Pacific Time (Interval Beginning)": "Timestamp",
+    "NP-15 LMP": "TH_NP15_GEN-APND",
+    "SP-15 LMP": "TH_SP15_GEN-APND",
+    "ZP-26 LMP": "TH_ZP26_GEN-APND"
+}
 
-# List all files in the input folder
-for filename in os.listdir(input_folder):
+# Iterate through each file in the input directory
+for filename in os.listdir(input_dir):
     if filename.endswith(".csv"):
-        file_path = os.path.join(input_folder, filename)
+        file_path = os.path.join(input_dir, filename)
+        print(f"Processing file: {filename}")
 
-        # Extract the year from the filename (first 4 characters)
-        year = filename[:4]
-
-        # Read the CSV file into a DataFrame
         try:
-            df = pd.read_csv(file_path,parse_dates=['Date'])
+            # Read the CSV file, skipping the first 3 rows (header is row 4)
+            # and reading data from row 5 onwards
+            df = pd.read_csv(file_path, header=3)
+
+            # Ensure the required columns exist in the DataFrame
+            if all(col in df.columns for col in selected_columns.keys()):
+
+                # Select and rename the columns
+                df_processed = df[list(selected_columns.keys())].rename(columns=selected_columns)
+
+                # Combine "Timestamp" and "Hour Number" to create a datetime timestamp
+                # Assuming 'Timestamp' column contains the date and 'Hour Number' contains the hour (1-24)
+                # We need to combine them and adjust the hour for datetime object (0-23)
+                # The original 'Local Timestamp Pacific Time (Interval Beginning)' already includes date and time,
+                # so we just need to ensure it's in datetime format.
+                # Let's confirm the format of 'Local Timestamp Pacific Time (Interval Beginning)'
+                # If it's already a full timestamp string, we just convert it.
+                # If 'Hour Number' is truly needed, we would combine it with the date part of 'Local Timestamp'.
+                # Given the column name "Local Timestamp Pacific Time (Interval Beginning)", it's highly likely
+                # it contains the full timestamp. We just need to convert it to datetime objects.
+                df_processed['Timestamp'] = pd.to_datetime(df_processed['Timestamp'], errors='coerce')
+
+                # Drop rows where Timestamp could not be created
+                df_processed.dropna(subset=['Timestamp'], inplace=True)
+
+                # Set 'Timestamp' as the index and sort
+                df_processed.set_index('Timestamp', inplace=True)
+                df_processed.sort_index(inplace=True)
+
+                # Extract the year from the filename
+                match = re.search(r'\d{4}', filename)
+                if match:
+                    year = match.group(0)
+                else:
+                    print(f"Could not extract year from filename: {filename}. Skipping.")
+                    continue
+
+                # Define the output filename and path
+                output_filename = f"USA_CAISO_{year}.csv"
+                output_filepath = os.path.join(output_dir, output_filename)
+
+                # Save the processed dataframe
+                df_processed.to_csv(output_filepath)
+                print(f"✅ Processed and saved {filename} to {output_filepath}")
+
+            else:
+                missing_cols = [col for col in selected_columns.keys() if col not in df.columns]
+                print(f"Skipping file {filename}: Missing required columns: {missing_cols}")
+
         except Exception as e:
-            print(f"Error reading {filename}: {e}")
-            continue
+            print(f"Error processing file {filename}: {e}")
 
-        # Check if necessary columns exist
-        if 'Date' not in df.columns or 'zone' not in df.columns or 'price' not in df.columns:
-            print(f"Skipping {filename}: Missing required columns (Date, zone, or price).")
-            continue
-
-        # Apply pivot table
-        try:
-            pivot_df = df.pivot_table(index='Date', columns='zone', values='price', aggfunc='first')
-        except Exception as e:
-            print(f"Error creating pivot table for {filename}: {e}")
-            continue
-
-        # Define the output path for the processed CSV
-        output_filename = f"{year}.csv"
-        output_path = os.path.join(output_folder, output_filename)
-
-        # Save the pivot table to a CSV file
-        try:
-            pivot_df.to_csv(output_path)
-            print(f"Processed and saved {filename} to {output_path}")
-        except Exception as e:
-            print(f"Error saving processed data for {filename} to {output_path}: {e}")
-
-print("Processing complete.")
+print("\nCAISO NEW data preprocessing complete.")
